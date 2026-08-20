@@ -1,0 +1,37 @@
+Jordan Rivera
+Senior Software Engineer
+
+EXPERIENCE
+
+Senior Software Engineer — Nimbus Data Systems (2022–Present)
+Designed and built a Retrieval-Augmented Generation pipeline for internal
+document search, using ChromaDB as the vector store and
+sentence-transformers (all-MiniLM-L6-v2) for embeddings. Implemented a
+FastAPI service layer serving the RAG pipeline to an internal support tool,
+reducing average document lookup time from 4 minutes to under 20 seconds
+for the support team. Also led migration of a legacy monolith to a
+microservices architecture using gRPC.
+
+Software Engineer — Alderly Tech (2019–2022)
+Built backend services in Python and Go. Worked on a chatbot project that
+used a large language model (via OpenAI's API) to answer customer FAQs;
+responsible for prompt design and response formatting, not model training
+or fine-tuning. Contributed to CI/CD pipeline improvements using GitHub
+Actions.
+
+Junior Developer — Alderly Tech (2017–2019)
+Maintained internal tooling in Python. Familiar with machine learning
+concepts through coursework.
+
+EDUCATION
+B.S. Computer Science, State University, 2017
+
+SKILLS
+Python, Go, Docker, Kubernetes, PostgreSQL, RAG, LangChain, LLMs,
+embeddings, vector databases, TensorFlow, PyTorch, AWS, Terraform,
+GraphQL, Redis
+
+PROJECTS
+Personal project: experimented with fine-tuning a small transformer model
+on a custom dataset for a hobby text-classification task (unpublished,
+not used in production).
