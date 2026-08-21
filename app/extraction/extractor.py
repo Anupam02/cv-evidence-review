@@ -84,7 +84,14 @@ LlamaIndex -> evidence for "AI Frameworks and Libraries"
 "Large Language Models (LLMs)" AND "Model Integration and APIs"
    If a tool ONLY appears in a skills list with no project tied to it, that still \
 counts as evidence - just at tier "mentioned_only", not "not_demonstrated".
-7. "additional_technologies_noted" is ONLY for AI/ML-relevant technologies that do \
+7. If a competency area has MULTIPLE relevant tools/technologies with DIFFERENT \
+strengths of evidence (e.g. one framework used in a real project, another only listed \
+in skills with no project), you must NOT collapse them into a single quote. Include \
+ALL relevant quotes for that area in the "evidence" list - one entry per tool/phrase. \
+Choose the "tier" based on the STRONGEST evidence present, but the "reasoning" must \
+explicitly name the weaker/mentioned-only items too, so no relevant technology is \
+silently dropped just because a stronger example exists for the same area.
+8. "additional_technologies_noted" is ONLY for AI/ML-relevant technologies that do \
 NOT fit any of the 9 listed competency areas. General non-AI infrastructure tools \
 (Docker, Kubernetes, PostgreSQL, AWS, Terraform, GraphQL, Redis, gRPC, CI/CD tools, \
 etc.) are NOT AI-relevant and must NOT appear in this list at all - leave them out \
@@ -241,6 +248,7 @@ Respond with ONLY the corrected JSON object."""
 
 if __name__ == "__main__":
     from app.loaders.document_loader import load_document
+    from app.validation.validator import validate_review
 
     path = sys.argv[1] if len(sys.argv) > 1 else "data/sample_cvs/jordan_rivera.txt"
     doc = load_document(path)
@@ -248,4 +256,19 @@ if __name__ == "__main__":
     extractor = Extractor()
     review = extractor.extract(doc.text, source=doc.source)
 
+    # Validate every extracted quote against the source CV text before
+    # trusting the output - this is what makes the review defensible
+    # if asked "how do you know the model didn't make this up".
+    report = validate_review(review, doc.text)
+
     print(review.model_dump_json(indent=2))
+    print()
+    print("=" * 60)
+    print(f"VALIDATION: {report.verified_count}/{report.total_quotes} quotes verified against source CV")
+    if not report.all_verified:
+        print("\n⚠ FLAGGED (did not verify cleanly - possible hallucination):")
+        for v in report.flagged:
+            print(f"  [{v.status.value}] score={v.match_score:.1f}  area={v.area}")
+            print(f"    quote: {v.quote[:120]}...")
+    else:
+        print("All evidence quotes verified against the source CV. ✓")

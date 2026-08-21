@@ -3,3 +3,4 @@ python-docx
 requests
 streamlit
 pydantic
+rapidfuzz
