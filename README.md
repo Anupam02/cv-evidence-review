@@ -18,9 +18,12 @@ CV file (.txt/.pdf/.docx)
     → Extraction           (app/extraction/)     LLM call -> structured CVReview
         - validated against a strict Pydantic schema
         - self-correcting retry loop on validation failure
-        - repair step for one known small-model quirk
-    → [next: Validation]  (app/validation/)     confirm evidence quotes are real, not hallucinated
-    → [next: UI]           (app/ui/)             Streamlit report view
+        - repair step for known small-model quirks (empty reasoning)
+    → Validation           (app/validation/)     fuzzy-match every evidence quote
+                                                    against the source CV text -
+                                                    flags anything that doesn't verify
+    → UI                    (app/ui/)             Streamlit: upload, run, browse results
+                                                    with inline ✓/⚠️ per quote
 ```
 
 ```
@@ -29,8 +32,8 @@ cv-evidence-review/
 │   ├── loaders/document_loader.py     Step 1 — file -> text
 │   ├── schema/evidence.py              Step 2 — the evidence-tier data model
 │   ├── extraction/extractor.py        Step 3 — LLM extraction + validation + repair
-│   ├── validation/                     Step 4 — anti-hallucination quote checking (next)
-│   └── ui/                             Step 5 — Streamlit app (next)
+│   ├── validation/validator.py        Step 4 — anti-hallucination quote checking
+│   └── ui/streamlit_app.py             Step 5 — Streamlit app
 └── data/sample_cvs/jordan_rivera.txt   Fictional test CV, deliberately mixes evidence
                                          tiers to exercise every code path
 ```
@@ -185,11 +188,60 @@ catch, since nothing in the schema *requires* the model to remember tools it lef
 **Fix applied:** prompt-level — instruct the model to include ALL relevant quotes for an
 area when evidence quality is mixed, tier reflects the strongest evidence, but
 `reasoning` must name the weaker/mentioned-only items too.
+**Result:** partial improvement, not fully reliable — on a later run the model still
+sometimes collapsed multiple tools into one quote despite the instruction. Left as a
+documented, deliberate limitation rather than chased further (see "alternative
+considered" below).
 **Alternative considered and deliberately not built:** restructuring the schema so each
 individual evidence quote carries its own micro-tier (rather than one tier per
 competency area) would represent this more precisely, but adds real complexity for a
 48-72hr take-home exercise. Documenting this as a considered tradeoff — not an
 oversight — is itself a reasonable answer if asked "what would you improve."
+
+### 9. All 8 competencies returned with `reasoning: ""` on a different test CV
+**Symptom:** on a second, more technically dense CV, extraction failed after 3 retries:
+`8 validation errors for CVReview ... reasoning: String should have at least 10
+characters`, for every single competency, not just one.
+**Cause:** a broader version of issue #5's failure mode — the model satisfied the JSON
+*structure* requirement (the `reasoning` key existed) but skipped filling in actual
+content, across the entire response, not just the last item.
+**Fix:** broadened `_repair_missing_reasoning` from only handling `not_demonstrated`
+entries to handling *any* tier with missing/empty reasoning — filling a generic,
+honest, template-derived fallback ("Tier 'X' assigned for Y based on N supporting
+evidence quotes extracted from the CV") rather than retrying again against the same
+wall. Real model-generated reasoning is always preserved untouched; the fallback only
+fires when the field is genuinely empty or under the length threshold. This trades some
+explanatory richness for reliability on a field that, unlike the evidence quotes
+themselves, doesn't carry independently-checkable factual claims.
+
+### 10. An evidence quote came back as a literal empty string
+**Symptom:** in the Streamlit UI, one quote for "Python" rendered as `⚠️ ""` — an
+empty string — and Step 4's validator correctly flagged it (0/100 match score, since
+there's nothing to match).
+**Cause:** the schema required the `evidence` *list* to be non-empty for any tier except
+`not_demonstrated`, but never required each individual quote *string* inside that list
+to contain actual text. `EvidenceQuote(quote="", location="...")` technically satisfied
+"evidence is present" while being meaningless.
+**Fix:** added `min_length=3` to `EvidenceQuote.quote` in the schema. Unlike the
+reasoning gaps above, this one is NOT auto-repaired — there's no honest way to
+"fill in" a fabricated CV quote, so an empty quote now fails validation and retries,
+giving the model another chance to produce a real one (or fail loudly, which is the
+correct outcome over silently shipping hollow evidence).
+**Worth noting:** this is a good example of the layered defense working as designed —
+even before this schema fix existed, Step 4's independent validation already caught the
+empty quote live in the UI and flagged it for manual review. Two independent checks
+catching the same class of problem is stronger than either alone.
+
+## Testing status
+
+- ✅ Tested against `jordan_rivera.txt` (fictional CV, mixed evidence tiers by design) —
+  clean run, 8/8 quotes verified
+- ✅ Tested against a second, more technically dense fictional CV (LoRA/PEFT fine-tuning,
+  hybrid search/reranking, FAISS) — surfaced issues #9 and #10 above, now fixed
+- ⬜ Not yet tested against `.pdf` or `.docx` formats specifically (only `.txt` so far) —
+  worth doing at least once before presenting, since PDF layout quirks are a documented
+  risk (see loader docstring) that hasn't actually been exercised
+- ⬜ Not yet tested against a real (non-fictional) resume
 
 ## Setup
 
@@ -199,20 +251,25 @@ ollama serve
 ollama pull llama3.2   # or qwen2.5:7b
 ```
 
-## Running (current state — extraction only, no UI yet)
+## Running
 
+```bash
+streamlit run app/ui/streamlit_app.py
+```
+
+Opens a browser UI: upload a CV (.txt/.md/.pdf/.docx), click "Run Review", browse
+results with evidence expandable per competency area and inline ✓/⚠️ verification
+status on every quote.
+
+For CLI-only testing without the UI (useful for quick debugging):
 ```bash
 python3 app/extraction/extractor.py data/sample_cvs/jordan_rivera.txt
 ```
 
 ## Future improvements
 
-- **Step 4 (next): Validation** — programmatically confirm every evidence quote the
-  model claims actually appears (verbatim or near-verbatim) in the source CV text,
-  as a last line of defense against hallucinated evidence even after all the schema
-  and prompt hardening above.
-- **Step 5: UI (Streamlit)** — upload CV(s), run review, browse results with evidence
-  expandable per competency area.
+- **Test against `.pdf`/`.docx` and a real resume** — only `.txt` fictional CVs have
+  been exercised so far (see Testing status above).
 - **Mixed-evidence schema redesign** — see item #8 above; a per-quote micro-tier would
   be more accurate than the current per-area tier, if time allows.
 - **Prompt/schema consistency check** — item #4 above happened because the prompt and

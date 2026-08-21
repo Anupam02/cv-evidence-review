@@ -58,8 +58,11 @@ class CompetencyTier(str, Enum):
 
 class EvidenceQuote(BaseModel):
     quote: str = Field(
+        min_length=3,
         description="A short, near-verbatim excerpt from the CV supporting this assessment. "
-                    "Must be checkable against the source text - not a paraphrase."
+                    "Must be checkable against the source text - not a paraphrase. "
+                    "Must not be empty - an empty quote provides zero verifiable support "
+                    "and cannot be checked against the source CV in Step 4.",
     )
     location: str = Field(
         default="",

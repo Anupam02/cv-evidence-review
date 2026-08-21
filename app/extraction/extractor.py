@@ -146,32 +146,99 @@ def _extract_json_block(raw: str) -> str:
 
 def _repair_missing_reasoning(data: dict) -> dict:
     """Patch a known model failure mode before validation: smaller local
-    models sometimes omit "reasoning" specifically on `not_demonstrated`
-    entries in a long JSON array (observed consistently on the LAST
-    competency area, regardless of prompt wording - this looks like a
-    genuine small-model limitation on long structured output, not a
-    prompt problem, since it survived multiple prompt rewrites).
+    models sometimes produce an empty "reasoning" string despite the
+    prompt requiring it - observed both narrowly (just the last
+    `not_demonstrated` item) and broadly (every single competency in
+    one run, all with reasoning: "" - the model satisfied the JSON
+    *structure* requirement but skipped filling in actual content).
 
-    Rather than burn retries re-asking the model to fill in a field
-    with genuinely low informational value (there's not much more to
-    "reason" about an absence than the tier itself already says), we
-    fill a standard, honest placeholder and let validation pass. This
-    is a deliberate reliability/cost tradeoff, not a way of hiding a
-    real gap - the resulting reasoning text is true and non-committal.
+    Retrying doesn't reliably fix this - it's a content-generation gap
+    under a long structured-output task, not a wording problem the
+    prompt can talk the model out of. So instead of burning retries,
+    we fill a generic, HONEST, template-based reasoning string derived
+    only from data already present (tier + evidence count) - never
+    inventing new facts about the candidate. This is a deliberate
+    reliability/richness tradeoff:
+      - For "not_demonstrated": states plainly that nothing was found.
+      - For every other tier: states how many evidence quotes support
+        the assigned tier, without claiming anything beyond what the
+        quotes themselves (already validated in Step 4) show.
 
-    Only applies to `not_demonstrated` entries specifically - any other
-    tier missing reasoning is a real problem worth retrying for, since
-    a "demonstrated" or "mentioned" claim with no explanation is a much
-    bigger honesty gap than a "not present" claim with no elaboration.
+    This keeps the pipeline honest - it never fabricates WHY a tier
+    was chosen beyond "the model said so, backed by N quotes" - while
+    not letting the whole extraction fail over a low-value field when
+    the evidence itself (the part that actually matters, and the part
+    Step 4 independently verifies) is present and real.
     """
     for comp in data.get("competencies", []):
-        if comp.get("tier") == "not_demonstrated":
-            reasoning = comp.get("reasoning", "")
-            if not reasoning or len(reasoning.strip()) < 10:
+        reasoning = comp.get("reasoning", "")
+        if reasoning and len(reasoning.strip()) >= 10:
+            continue  # already has real content, leave it alone
+
+        area = comp.get("area", "this competency")
+        tier = comp.get("tier", "unknown")
+        evidence = comp.get("evidence", [])
+
+        if tier == "not_demonstrated":
+            comp["reasoning"] = f"No evidence of {area} was found anywhere in the CV text."
+        elif evidence:
+            n = len(evidence)
+            plural = "quote" if n == 1 else "quotes"
+            comp["reasoning"] = (
+                f"Tier '{tier}' assigned for {area} based on {n} supporting evidence "
+                f"{plural} extracted from the CV (see evidence above)."
+            )
+        else:
+            # Shouldn't normally happen (schema requires evidence for
+            # non-not_demonstrated tiers), but fall back safely rather
+            # than leaving reasoning invalid if it somehow does.
+            comp["reasoning"] = f"Tier '{tier}' assigned for {area}; see evidence above."
+
+    return data
+
+
+def _repair_empty_quotes(data: dict) -> dict:
+    """Patch another observed model failure mode: an evidence entry with
+    a quote that's empty or too short to be meaningful (e.g. quote: "").
+    This is DIFFERENT from the reasoning repairs above and must be
+    handled differently - we can never fabricate a CV quote to fill
+    this gap, since that would be exactly the hallucination this whole
+    system exists to prevent.
+
+    Instead: drop any evidence entries with an unusable quote. If that
+    leaves a competency with ZERO real evidence but a tier other than
+    "not_demonstrated" (which is the only tier our schema allows to
+    have empty evidence), downgrade the tier to "not_demonstrated" and
+    say so explicitly in the reasoning.
+
+    This is a deliberately conservative choice: it may under-report a
+    competency the model genuinely detected but failed to quote
+    correctly, rather than risk over-reporting with fabricated
+    evidence. Given the system's entire premise is "don't claim what
+    you can't verify," under-claiming is the safer failure direction.
+    The reasoning text makes clear this was a system-level fallback,
+    not a genuine absence assessment - so a human reviewer knows to
+    treat it differently from a real not_demonstrated finding.
+    """
+    for comp in data.get("competencies", []):
+        evidence = comp.get("evidence", [])
+        real_evidence = [
+            e for e in evidence
+            if e.get("quote", "").strip() and len(e.get("quote", "").strip()) >= 3
+        ]
+
+        if len(real_evidence) < len(evidence):
+            comp["evidence"] = real_evidence
+            if not real_evidence and comp.get("tier") != "not_demonstrated":
                 area = comp.get("area", "this competency")
+                comp["tier"] = "not_demonstrated"
                 comp["reasoning"] = (
-                    f"No evidence of {area} was found anywhere in the CV text."
+                    f"The extraction model flagged {area} but could not produce a "
+                    f"verifiable quote to support it. Conservatively downgraded to "
+                    f"'not_demonstrated' rather than accept unverifiable evidence - "
+                    f"recommend manual review of the original CV for this area."
                 )
+
     return data
 
 
@@ -221,6 +288,7 @@ class Extractor:
 
             try:
                 data = json.loads(json_str)
+                data = _repair_empty_quotes(data)
                 data = _repair_missing_reasoning(data)
                 return CVReview.model_validate(data)
             except (json.JSONDecodeError, Exception) as e:

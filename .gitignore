@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env / secrets
+.env
+.env.local
+
+# Real CVs / candidate data - never commit actual resumes, only the
+# fictional sample CVs in data/sample_cvs/ are meant to be tracked
+data/uploads/
+data/real_cvs/
+*.pdf
+*.docx
+!data/sample_cvs/*.pdf
+!data/sample_cvs/*.docx
+
+# Temp files created during upload handling
+*.tmp
