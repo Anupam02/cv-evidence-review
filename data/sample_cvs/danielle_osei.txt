@@ -1,0 +1,26 @@
+Danielle Osei
+Solutions Engineer
+
+EXPERIENCE
+
+Solutions Engineer — Vantage Cloud Partners (2021–Present)
+Work with enterprise clients to scope and deliver cloud migration projects. Coordinate
+with engineering teams to implement client requirements. Manage client relationships
+and produce technical documentation for delivered solutions. Familiar with modern AI
+tooling and keep up with the latest developments in the space.
+
+Technical Consultant — Vantage Cloud Partners (2019–2021)
+Supported pre-sales engineering for enterprise software deals. Built demo environments
+for client presentations. Occasionally used AI coding assistants to speed up demo
+development.
+
+EDUCATION
+B.A. Business Information Systems, Lakeshore University, 2019
+
+SKILLS
+AI, Machine Learning, Deep Learning, LLMs, GPT, RAG, Vector Databases, Embeddings,
+LangChain, AutoGPT, Prompt Engineering, TensorFlow, PyTorch, Python, Cloud
+Architecture, AWS, Azure, GCP, Kubernetes, Terraform, DevOps, Agile, Scrum
+
+CERTIFICATIONS
+AWS Certified Cloud Practitioner (2022)

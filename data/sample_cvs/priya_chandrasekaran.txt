@@ -1,0 +1,30 @@
+Priya Chandrasekaran
+Machine Learning Engineer
+
+EXPERIENCE
+
+ML Engineer — Solstice AI (2023–Present)
+Designed an end-to-end RAG architecture: PDF ingestion, recursive chunking, embedding
+generation with sentence-transformers, FAISS vector index, hybrid search, and reranking
+before GPT-4o generation. Fine-tuned a Llama 3 8B adapter with LoRA/PEFT for internal
+support questions and served it with vLLM. Integrated OpenAI and Anthropic APIs behind
+a FastAPI inference service, with retries, output schema validation, and prompt
+versioning. Trained and evaluated classical models in scikit-learn and a PyTorch
+ranking model for document relevance.
+
+Data Scientist — Marlowe Analytics (2020–2023)
+Built demand-forecasting models in Python using pandas, scikit-learn, and XGBoost.
+Owned the ML platform architecture: feature store design, model versioning with MLflow,
+and a batch scoring pipeline running on Airflow. Presented findings to leadership;
+no deployment or production-serving responsibility in this role.
+
+Software Engineer — Marlowe Analytics (2018–2020)
+General backend development in Python and Java. No ML-specific work in this role.
+
+EDUCATION
+M.S. Computer Science (Machine Learning specialization), Carnegie Mellon University, 2018
+
+SKILLS
+Python, PyTorch, TensorFlow, scikit-learn, LangChain, LlamaIndex, FAISS, Pinecone,
+ChromaDB, FastAPI, Docker, Kubernetes, MLflow, Airflow, AWS SageMaker, vLLM, Hugging
+Face Transformers

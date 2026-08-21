@@ -1,0 +1,27 @@
+Marcus Webb
+Backend Developer
+
+EXPERIENCE
+
+Backend Developer — Ferrous Systems (2022–Present)
+Develop and maintain REST APIs in Node.js and Express for an e-commerce inventory
+platform. Work with PostgreSQL and Redis for data storage and caching. Wrote
+integration tests using Jest and set up CI pipelines in GitHub Actions. Collaborated
+with the frontend team on API contract design.
+
+Junior Developer — Ferrous Systems (2020–2022)
+Fixed bugs and implemented small features in an internal admin dashboard built with
+React and Node.js. Assisted with database migrations.
+
+EDUCATION
+B.S. Information Technology, Riverside State College, 2020
+
+SKILLS
+JavaScript, Node.js, Express, React, PostgreSQL, Redis, Docker, Git, Jest, GitHub Actions
+
+PROJECTS
+Built a personal budgeting app as a side project using React and Firebase.
+
+ADDITIONAL
+Currently taking an online course on machine learning fundamentals in personal time;
+have not yet applied any of it professionally.
